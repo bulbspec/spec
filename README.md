@@ -2,9 +2,9 @@
 
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
-Bulb enables projects to leverage dependency injection and inversion of control (IoC) without being coupled to a specific service provider or IoC container implementation.
+Bulb enables projects to leverage dependency injection and dynamic composition without being coupled to a specific service provider or IoC container implementation.
 
-The [`bulb`][bulb-package] package provides a set of interfaces for resolving values of arbitrary types at runtime. The documentation is a guide for both consumers and implementors of the interfaces.
+The [`bulb`][bulb-package] package provides a set of interfaces for resolving values of arbitrary types at runtime. Implementations of [`bulb`][bulb-package] interfaces provide mechanisms for specifying how the values should be constructed and how their dependencies are satisfied. The documentation is a guide for both consumers and implementors of the interfaces.
 
 ## Conventions
 
@@ -20,7 +20,7 @@ The [`bulb`][bulb-package] package docs are a reference for working with and imp
 
 ### Closing Values
 
-When [`Close`][bulb.Scope.Close] is called on a [`Scope`][bulb.Scope], the lifetime of the [`Transient`][bulb.Transient] and [`Scoped`][bulb.Scoped] values from its [`Resolver`][bulb.Resolver] is over. Implementations MUST call [`Close`][bulb.Closer.Close] on any value that implements [`Closer`][bulb.Closer].
+When [`scope.Close`][bulb.Scope.Close] is called, the lifetime of the [`Transient`][bulb.Transient] and [`Scoped`][bulb.Scoped] values from its [`Resolver`][bulb.Resolver] ends. Implementations MUST call [`Close`][bulb.Closer.Close] on any value that implements [`Closer`][bulb.Closer].
 
 ### Dependencies
 
@@ -38,30 +38,21 @@ See the docs for [`Transient`][bulb.Transient], [`Scoped`][bulb.Scoped], and [`S
 
 The [`Resolver`][bulb.Resolver] interface is the primary contract between consumers and implementors. Here's an overview of a typical integration:
 
-- Some application or framework code uses a [`Resolver`][bulb.Resolver] to resolve the values it needs.
 - Some setup code configures a specific [`Resolver`][bulb.Resolver] implementation to satisfy the types the application or framework code needs.
 - The setup code passes the configured [`Resolver`][bulb.Resolver] to the application or framework code.
-- They all live happily ever after.
+- The application or framework code uses the [`Resolver`][bulb.Resolver] to resolve the values it needs without any coupling to how the were initialized.
 
 ### Root And Scoped Resolvers
 
-A root resolver is any instance of [`Resolver`][bulb.Resolver] that did not come from a call to [`NewScope`][bulb.Resolver.NewScope]. The mechanism for obtaining a root resolver is implementation-defined. A single instance of each [`Singleton`][bulb.Singleton] type is [shared](#shareable-types) by a root resolver and any scoped resolver created from it, but not across distinct root resolvers. Root resolvers SHOULD NOT resolve [`Scoped`][bulb.Scoped] types.
+A root resolver is any instance of [`Resolver`][bulb.Resolver] that did not come from a call to [`Scope.Resolver`][bulb.Scope.Resolver]. The mechanism for obtaining a root resolver is implementation-defined. A single instance of each [`Singleton`][bulb.Singleton] type is [shared](#shareable-types) by a root resolver and any scoped resolver created from it, but not across distinct root resolvers. Root resolvers SHOULD NOT resolve [`Scoped`][bulb.Scoped] types.
 
-A scoped resolver is any instance of [`Resolver`][bulb.Resolver] obtained from a call to [`NewScope`][bulb.Resolver.NewScope]. A single instance of each [`Scoped`][bulb.Scoped] type is [shared](#shareable-types) by scoped resolver, but not by any other [`Resolver`][bulb.Resolver].
-
-There is no such thing as a nested [`Scope`][bulb.Scope]. A scoped resolver obtained from another scoped resolver will not share instances of [`Scoped`][bulb.Scoped] types with the original [`Resolver`][bulb.Resolver].
-
-### ServiceProviders
-
-The [`ServiceProvider`][bulb.ServiceProvider] interface is an extension of the [`Resolver`][bulb.Resolver] interface that provides the ability to create new [resolution scopes](#root-and-scoped-resolvers). The primary usecase for a [`ServiceProvider`][bulb.ServiceProvider] is supporting logic that defines isolation boundaries within an application or framework. E.g. an HTTP API may use a [`ServiceProvider`][bulb.ServiceProvider] to create a new scope for each request it handles.
+A scoped resolver is any [`Resolver`][bulb.Resolver] obtained from a call to [`Scope.Resolver`][bulb.Scope.Resolver]. A single instance of each [`Scoped`][bulb.Scoped] type is [shared](#shareable-types) by scoped resolver, but not by any other [`Resolver`][bulb.Resolver].
 
 ### Shareable Types
 
-Sometimes [`Resolver.Get`][bulb.Resolver.Get] needs to return "the same" instance when the same type is resolved more than once. This is not technically possible because Go doesn't have references, but for some types and usecases a copy is _effectively_ the same instance. Unfortunately, _shareability_ can't be determined statically because it's not a property of the type alone. It also depends on how the values are used.
+Sometimes [`Resolver.Get`][bulb.Resolver.Get] needs to return "the same" instance when the same type is resolved more than once. This is not technically possible because Go doesn't have references, but for some types and usecases a copy is _effectively_ the same instance. Whether a type is _shareable_ depends on its copy semantics, method implementations, and how it's used. For example, copying the value of a struct type could be considered instance sharing so long as the struct's own state is never mutated. Whether the struct is just holding primative values, or holding pointers to shared mutable data, one copy of the struct would be indistinguishable from another. On the other hand, even using pointers directly can't guarantee shared instance semantics because one of the pointers could be reassigned to point a different value.
 
-For example, copying the value of a struct type could be considered instance sharing so long as the struct's own state is never mutated. Whether the struct is just holding primative values, or holding pointers to shared mutable data, one copy of the struct would be indistinguishable from another. On the other hand, even using pointers directly can't guarantee shared instance semantics because one of the pointers could be reassigned to point a different value.
-
-Since Go doesn't provide mechanisms to validate sharing semantics at compile time it's up to implementations and users to decide which types are sharable. Bulb is only concerned with the concept because the semantics of [lifetimes](#lifetimes) and [scopes](#root-and-scoped-resolvers) depend on it.
+Since sharing semantics can't be determined at compile time, it's up to implementations and users to decide which types are sharable. Bulb is only concerned with the concept because the semantics of [lifetimes](#lifetimes) and [scopes](#root-and-scoped-resolvers) depend on it.
 
 [bulb-package]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb
 [bulb.Lifetime]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Lifetime
@@ -69,10 +60,7 @@ Since Go doesn't provide mechanisms to validate sharing semantics at compile tim
 [bulb.Closer.Close]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Closer.Close
 [bulb.Resolver]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Resolver
 [bulb.Resolver.Get]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Resolver.Get
-[bulb.Resolver.NewScope]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Resolver.NewScope
-[bulb.Scope]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Scope
 [bulb.Scope.Close]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Scope.Close
 [bulb.Scoped]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Scoped
-[bulb.ServiceProvider]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#ServiceProvider
 [bulb.Singleton]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Singleton
 [bulb.Transient]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Transient
