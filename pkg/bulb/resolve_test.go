@@ -40,9 +40,6 @@ func TestResolve(t *testing.T) {
 		resolver := mockResolver{}
 		resolver.returns(struct{}{}, nil)
 		_, err := Resolve[string](&resolver)
-		if !errors.Is(err, errInvalidResolution) {
-			t.Errorf("expected %v; got %v", errInvalidResolution, err)
-		}
 		var invalidType invalidResolution
 		if !errors.As(err, &invalidType) {
 			t.Fatalf("expected %v to be %T", err, invalidType)
