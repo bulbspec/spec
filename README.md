@@ -54,6 +54,7 @@ Sometimes [`Resolver.Get`][bulb.Resolver.Get] needs to return "the same" instanc
 
 Since sharing semantics can't be determined at compile time, it's up to implementations and users to decide which types are sharable. Bulb is only concerned with the concept because the semantics of [lifetimes](#lifetimes) and [scopes](#root-and-scoped-resolvers) depend on it.
 
+[BCP 14]: https://www.rfc-editor.org/info/bcp14
 [bulb-package]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb
 [bulb.Lifetime]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Lifetime
 [bulb.Closer]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Closer
@@ -64,3 +65,5 @@ Since sharing semantics can't be determined at compile time, it's up to implemen
 [bulb.Scoped]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Scoped
 [bulb.Singleton]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Singleton
 [bulb.Transient]: https://pkg.go.dev/github.com/bulbspec/spec/pkg/bulb#Transient
+[RFC2119]: https://datatracker.ietf.org/doc/html/rfc2119
+[RFC8174]: https://datatracker.ietf.org/doc/html/rfc8174
